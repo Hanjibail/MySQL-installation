@@ -1,0 +1,53 @@
+---
+  - name: Move MySQL data directory to New Location
+    hosts: Dbderver
+    become: yes
+    tasks:
+      - name: Stop mysql server & check the status
+        systemd: 
+          name: mysql
+          state: stopped
+
+      - name: copy existing database directory to new location
+        copy:
+          src: /var/lib/mysql
+          dest: /mnt/volume-nyc1-01
+          owner: name
+          group: name  
+          mode: 0644
+     
+      - name: rename the current folder
+        command: mv /var/lib/mysql /var/lib/mysql.bak
+
+      - name: pointing to new location
+         replace:
+           path: /etc/mysql/mysql.conf.d/mysqld.cnf
+           regexp: '#(\s+)datadir=/var/lib/mysql'
+           replace: 'datadir=/mnt/volume-nyc1-01/mysql'
+
+      - name: Configuring AppArmor Access Control Rules
+         replace: 
+           path: /etc/apparmor.d/tunables/alias
+           regexp: '#(\s+)alias /var/lib/mysql/'
+           replace: alias /var/lib/mysql/ -> /mnt/volume-nyc1-01/mysql/,
+     
+      - name: restart apparmor
+         systemd:
+           name: apparmor
+           state: restarted
+
+      - name: create d directory
+         file:
+           path: /var/lib/mysql/mysql
+           state: directory
+        
+         notify:
+          - Restart mysql 
+         
+    handlers: 
+      - name: Restart mysql
+        service:
+          name: mysql
+          state: restarted
+
+         
