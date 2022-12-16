@@ -1,0 +1,39 @@
+---
+  - name: Install MySQL server on Ubuntu and create the user
+    become: yes
+    hosts: Dbservers
+    tasks:
+      - name: Update the package index
+        apt: 
+          update_cache=yes force_apt_get=yes
+
+      - name: Install MySQL server
+        package:
+          - name: mysql-server
+            state: latest
+            
+      - name: Start and enable mysql service
+        service:
+          - name: mysql
+            state: started
+            enabled: yes
+
+      - name: Creating mysql user and gives the privilages
+        mysql_user:
+          - name: "{{mysql_user}}
+            password: "{{mysql_passwd}}"
+            encrypted: yes
+            priv: '*.*:create,alter,drop,insert,update,delete,select,GRANT'
+            state: present 
+         
+        notify: 
+          - Restart mysql
+
+    handlers:
+       - name: Restart mysql
+         service:
+           name: mysql
+           state: restarted
+
+  - name: Change move the data directory to new location
+    import_playbook: Newdirectory.yaml
